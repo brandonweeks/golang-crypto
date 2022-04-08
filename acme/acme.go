@@ -530,6 +530,27 @@ func (c *Client) Accept(ctx context.Context, chal *Challenge) (*Challenge, error
 	return v.challenge(), nil
 }
 
+func (c *Client) AcceptWithPayload(ctx context.Context, chal *Challenge, payload interface{}) (*Challenge, error) {
+	if _, err := c.Discover(ctx); err != nil {
+		return nil, err
+	}
+
+	res, err := c.post(ctx, nil, chal.URI, payload, wantStatus(
+		http.StatusOK,       // according to the spec
+		http.StatusAccepted, // Let's Encrypt: see https://goo.gl/WsJ7VT (acme-divergences.md)
+	))
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	var v wireChallenge
+	if err := json.NewDecoder(res.Body).Decode(&v); err != nil {
+		return nil, fmt.Errorf("acme: invalid response: %v", err)
+	}
+	return v.challenge(), nil
+}
+
 // DNS01ChallengeRecord returns a DNS record value for a dns-01 challenge response.
 // A TXT record containing the returned value must be provisioned under
 // "_acme-challenge" name of the domain being validated.
