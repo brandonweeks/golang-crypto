@@ -207,10 +207,14 @@ func (c *Client) AuthorizeOrder(ctx context.Context, id []AuthzID, opt ...OrderO
 		NotAfter    string        `json:"notAfter,omitempty"`
 	}{}
 	for _, v := range id {
-		req.Identifiers = append(req.Identifiers, wireAuthzID{
-			Type:  v.Type,
-			Value: v.Value,
-		})
+		i := map[string]interface{}{
+			"type":  v.Type,
+			"value": v.Value,
+		}
+		for extraKey, extraValue := range v.ExtraFields {
+			i[extraKey] = extraValue
+		}
+		req.Identifiers = append(req.Identifiers, i)
 	}
 	for _, o := range opt {
 		switch o := o.(type) {
@@ -320,7 +324,7 @@ func responseOrder(res *http.Response) (*Order, error) {
 		CertURL:     v.Certificate,
 	}
 	for _, id := range v.Identifiers {
-		o.Identifiers = append(o.Identifiers, AuthzID{Type: id.Type, Value: id.Value})
+		o.Identifiers = append(o.Identifiers, AuthzID{Type: id["type"].(string), Value: id["value"].(string)})
 	}
 	if v.Error != nil {
 		o.Error = v.Error.error(nil /* headers */)

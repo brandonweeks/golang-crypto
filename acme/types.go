@@ -425,8 +425,9 @@ type Authorization struct {
 
 // AuthzID is an identifier that an account is authorized to represent.
 type AuthzID struct {
-	Type  string // The type of identifier, "dns" or "ip".
-	Value string // The identifier itself, e.g. "example.org".
+	Type        string // The type of identifier, "dns" or "ip".
+	Value       string // The identifier itself, e.g. "example.org".
+	ExtraFields map[string]interface{}
 }
 
 // DomainIDs creates a slice of AuthzID with "dns" identifier type.
@@ -450,10 +451,7 @@ func IPIDs(addr ...string) []AuthzID {
 }
 
 // wireAuthzID is ACME JSON representation of authorization identifier objects.
-type wireAuthzID struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
-}
+type wireAuthzID map[string]interface{}
 
 // wireAuthz is ACME JSON representation of Authorization objects.
 type wireAuthz struct {
@@ -470,7 +468,7 @@ func (z *wireAuthz) authorization(uri string) *Authorization {
 	a := &Authorization{
 		URI:          uri,
 		Status:       z.Status,
-		Identifier:   AuthzID{Type: z.Identifier.Type, Value: z.Identifier.Value},
+		Identifier:   AuthzID{Type: z.Identifier["type"].(string), Value: z.Identifier["value"].(string)},
 		Expires:      z.Expires,
 		Wildcard:     z.Wildcard,
 		Challenges:   make([]*Challenge, len(z.Challenges)),
@@ -485,7 +483,7 @@ func (z *wireAuthz) authorization(uri string) *Authorization {
 func (z *wireAuthz) error(uri string) *AuthorizationError {
 	err := &AuthorizationError{
 		URI:        uri,
-		Identifier: z.Identifier.Value,
+		Identifier: z.Identifier["value"].(string),
 	}
 
 	if z.Error != nil {
